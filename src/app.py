@@ -32,10 +32,57 @@ def sitemap():
 @app.route('/members', methods=['GET'])
 def handle_hello():
     # This is how you can use the Family datastructure by calling its methods
-    members = jackson_family.get_all_members()
-    response_body = {"hello": "world",
-                     "family": members}
-    return jsonify(response_body), 200
+    try:
+        members = jackson_family.get_all_members()
+        return jsonify(members), 200  # ← esto devuelve una lista directamente
+    except Exception:
+        return jsonify({"error": "Internal Server Error"}), 500
+
+@app.route('/members/<int:member_id>', methods=['GET'])
+def get_single_member(member_id):
+    try:
+        member = jackson_family.get_member(member_id)
+        if member is None:
+            return jsonify({"error": "Member not found"}), 404
+        return jsonify(member), 200
+    except Exception:
+        return jsonify({"error": "Internal Server Error"}), 500
+    
+@app.route('/members', methods=['POST'])
+def create_member():
+    try:
+        data = request.get_json()
+
+        if not data:
+            return jsonify({"error": "Invalid or missing JSON body"}), 400
+
+        # Validar campos obligatorios
+        if "first_name" not in data or "age" not in data or "lucky_numbers" not in data:
+            return jsonify({"error": "Missing required fields"}), 400
+
+        # Construir nuevo miembro
+        new_member = {
+            "id": data.get("id"),  # puede venir o no
+            "first_name": data["first_name"],
+            "age": data["age"],
+            "lucky_numbers": data["lucky_numbers"]
+        }
+
+        jackson_family.add_member(new_member)
+        return jsonify(new_member), 200
+    except Exception:
+        return jsonify({"error": "Internal Server Error"}), 500
+    
+@app.route('/members/<int:member_id>', methods=['DELETE'])
+def remove_member(member_id):
+    try:
+        was_deleted = jackson_family.delete_member(member_id)
+        if not was_deleted:
+            return jsonify({"error": "Member not found"}), 404
+        return jsonify({"done": True}), 200
+    except Exception:
+        return jsonify({"error": "Internal Server Error"}), 500
+
 
 
 
